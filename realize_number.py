@@ -57,8 +57,8 @@ def check_types():
 
 def clicked():
     if check_types():
-        str_answers = map(lambda i: str(i.get()),answers)
-        str_types = map(lambda i: str(i.get()), types)
+        str_answers = map(lambda i: str(i.get().encode('utf-8')),answers)
+        str_types = map(lambda i: str(i.get().encode('utf-8')), types)
         print (str_answers, "----", str_types)
         window_setup.destroy()
 
