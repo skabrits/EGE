@@ -1,5 +1,7 @@
 # coding=utf-8
 
+import yaml
+
 import pprint
 from copy import copy
 from time import sleep
@@ -20,33 +22,62 @@ import itertools
 import operator
 import xlsxwriter as xlsxwriter
 
+class maket_class:
+    def __init__(self, answ, types):
+        self.answers_str = [i.get() for i in answ]
+        self.types_str = [i.get() for i in types]
+
+
+class choose_types:
+    INDEF = "выберите тип"
+    NUM_NOORDER = "цифры (важен порядок)"
+    NUM_ORDER = "цифры (неважен порядок)"
+    WORD = "слова"
+    NUM = "число"
+
+
 def check_set_types():
     for i in range(len(types)):
-        if str(types[i].get().encode('utf-8')) == "выберите тип" and str(answers[i].get().encode('utf-8')) != "":
+        if str(types[i].get()) == choose_types.INDEF and str(answers[i].get()) != "":
             messagebox.showerror('Выбирите все типы.', ('Проблема в задании ' + str(i+1)))
             return False
     return True
 
-def isalpha_rus(c):
-    return c >= ("а".encode('utf-8')) and c <= ('я'.encode('utf-8')) or c >= ('А'.encode('utf-8')) and c <= ('Я'.encode('utf-8')) or c == ('ё'.encode('utf-8')) or c == ('Ё'.encode('utf-8'))
 
-def isAlpha_rus(word):
-    ret = True
-    for i in word:
-        ret = isalpha_rus(i)
-    return ret
+def is_named():
+    return entr.get() != ""
+
+
+def set_maket():
+    if is_named():
+        with open('config.yaml', 'w') as outfile:
+            created_maket = maket_class(answers, types)
+            makets[entr.get()] = created_maket
+            yaml.dump(makets, outfile)
+    else:
+        messagebox.showerror('Выбирите название макета.', 'Укажите имя')
+
+
+# def isalpha_rus(c):
+#     return c >= 'а' and c <= 'я' or c >= 'А' and c <= 'Я' or c == 'ё' or c == 'Ё'
+#
+# def isAlpha_rus(word):
+#     ret = True
+#     for i in word:
+#         ret = isalpha_rus(i)
+#     return ret
 
 
 def check_types():
     if check_set_types():
         for i in range(len(answers)):
-            if str(types[i].get().encode('utf-8')) == "слова":
-                if not(isAlpha_rus(str(answers[i].get().encode('utf-8')))):
+            if str(types[i].get()) == choose_types.WORD:
+                if not((str(answers[i].get())).isalpha()):
                     messagebox.showerror('Тип не соответствует значению.',
                                          ('Проблема в задании ' + str(i+1)))
                     return False
-            elif str(types[i].get().encode('utf-8')) == "число (неважен порядок)" or str(types[i].get().encode('utf-8')) == "число (важен порядок)":
-                if not(str(answers[i].get().encode('utf-8')).isdigit()):
+            elif str(types[i].get()) == choose_types.NUM_NOORDER or str(types[i].get()) == choose_types.NUM_ORDER:
+                if not(str(answers[i].get()).isdigit()):
                     messagebox.showerror('Тип не соответствует значению.',
                                          ('Проблема в задании ' + str(i+1)))
                     return False
@@ -55,16 +86,33 @@ def check_types():
         return True
     return False
 
+
 def clicked():
     if check_types():
-        str_answers = map(lambda i: str(i.get().encode('utf-8')),answers)
-        str_types = map(lambda i: str(i.get().encode('utf-8')), types)
+        global str_types
+        global str_answers
+        str_answers = list(map(lambda i: i.get(),answers))
+        str_types = list(map(lambda i: i.get(), types))
         print (str_answers, "----", str_types)
         window_setup.destroy()
 
-def choose_maket():
-    pass
 
+def choose_maket():
+    curr_mak = makets[maket.get()]
+    for i in range(len(types)):
+        types[i].set(curr_mak.types_str[i])
+        answers[i].delete(0,END)
+        answers[i].insert(0,curr_mak.answers_str[i])
+
+
+with open('config.yaml', 'r') as file:
+    # The FullLoader parameter handles the conversion from YAML
+    # scalar values to Python the dictionary format
+    makets = yaml.load(file, Loader=yaml.Loader)
+    if makets == None:
+        makets = dict()
+
+curr_mak = None
 
 str_answers = list()
 str_types = list()
@@ -92,7 +140,7 @@ for i in range(2,42):
     lbl1.grid(column=0, row=i+1)
 
     types.append(Combobox(frame))
-    types[i-2]['values'] = ("выберите тип", "число (важен порядок)", "число (неважен порядок)", "слова")
+    types[i-2]['values'] = (choose_types.INDEF, choose_types.WORD, choose_types.NUM, choose_types.NUM_ORDER, choose_types.NUM_NOORDER)
     types[i - 2].current(0)
     types[i - 2].grid(column=1, row=i+1)
 
@@ -100,15 +148,21 @@ for i in range(2,42):
     answers[i-2].grid(column=3, row=i+1)
 
 maket = Combobox(frame)
-maket['values'] = ("выберите шаблон", "русский язык 2019 год", "физика 2019 год")
+maket['values'] = tuple(makets.keys())
 maket.current(0)
 maket.grid(column=1, row=1)
 
 btn = Button(frame, text="Выбрать", command=choose_maket)
 btn.grid(column=2, row=1)
 
-btn = Button(frame, text="Готово", command=clicked)
-btn.grid(column=1, row=45)
+entr = Entry(frame, width=10)
+entr.grid(column=0, row=2)
+
+btn1 = Button(frame, text="Создать", command=set_maket)
+btn1.grid(column=1, row=2)
+
+btn2 = Button(frame, text="Готово", command=clicked)
+btn2.grid(column=1, row=45)
 
 canvas.create_window(0, 0, anchor='nw', window=frame)
 # make sure everything is displayed before configuring the scrollregion
@@ -142,7 +196,7 @@ ret, imr = cv.threshold(imr, 175, 255, cv.THRESH_BINARY)
 cv.imshow('imr', imr)
 cv.resizeWindow('imr', 600, 600)
 
-ct, hr = cv.findContours(imr, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+a, ct, hr = cv.findContours(imr, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 # print(ct)
 # ind = 0
 # l0 = 0
@@ -181,30 +235,40 @@ calib_rects = sorted(calib_rects, key=operator.itemgetter(0, 1))
 scale_x = (calib_rects[3][0] - calib_rects[0][0]) / (2062 - 135)
 scale_y = (calib_rects[0][1] - calib_rects[3][1]) / (2765 - 624)
 
-zerox = 90 * scale_x
-str_point = ((calib_rects[0][0] + 72 - 90) * scale_x, (calib_rects[3][1] + 260) * scale_y)
-width_line = (87 * scale_y) // 1
-lenth_line = (1003 * scale_x) // 1
-ir_zazor = (37 * scale_y) // 1
+zerox = round(90 * scale_x)
+str_point = (round((calib_rects[0][0] + 72 - 90) * scale_x), round((calib_rects[3][1] + 260) * scale_y))
+width_line = round(87 * scale_y)
+lenth_line = round(1003 * scale_x)
+ir_zazor = round(37 * scale_y)
+cell_size = round(59 * scale_x)
 
 for j in range(2):
     for k in range(4):
         for i in range(1, 6):
-            x, y = str_point
-            cv.namedWindow(str(i + k * 5 + j * 20))
-            cv.moveWindow(str(i + k * 5 + j * 20), j*400, (i+k*5)*35)
+            text = ""
+            for l in range(17):
+                x, y = str_point
+                cv.namedWindow(str(l * 100 + i + k * 5 + j * 20))
+                cv.moveWindow(str(l * 100 + i + k * 5 + j * 20), (j*400 + l*22), (i+k*5)*35)
 
-            # print(x + (j * lenth_line + j * (x)), " vs ", width)
-            roi = image[y + (i - 1 + k * 5) * width_line + k * ir_zazor: y + (i + k * 5) * width_line + k * ir_zazor,
-                  x + zerox + (j * lenth_line + j * (x)): x + zerox + ((j + 1) * lenth_line)]
-            roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
-            ret, roi = cv.threshold(roi, 240, 255, cv.THRESH_BINARY)
-            cv.imshow(str(i + k * 5 + j * 20), roi)
-            text = pytesseract.image_to_string(roi, lang='eng',
-                                               config='--psm 13 --oem 3 -c tessedit_char_whitelist=0123456789')
-            if text == None or text == "":
-                text = pytesseract.image_to_string(roi, lang='rus')
+                # print(x + (j * lenth_line + j * (x)), " vs ", width)
+                roi = image[y + (i - 1 + k * 5) * width_line + k * ir_zazor: y + (i + k * 5) * width_line + k * ir_zazor,
+                      x + zerox + (j * lenth_line + j * x) + l * cell_size: x + zerox + (j * lenth_line + j * x) + (l + 1) * cell_size]
+                roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+                ret, roi = cv.threshold(roi, 240, 255, cv.THRESH_BINARY)
+                cv.imshow(str(l * 100 + i + k * 5 + j * 20), roi)
+                letter = ""
+                if str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM_NOORDER or str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM_ORDER or str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM:
+                    letter = pytesseract.image_to_string(roi, lang='eng',
+                                                       config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
+                elif str_types[i - 1 + k * 5 + j * 20] == choose_types.WORD:
+                    letter = pytesseract.image_to_string(roi, lang='rus',
+                                                       config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+                text += letter
             answ[(i + k * 5 + j * 20)] = text
+
+# print(answers)
+print(answ.values())
 
 workbook = xlsxwriter.Workbook('student1_checked.xlsx')
 worksheet = workbook.add_worksheet()
@@ -217,6 +281,7 @@ col = 0
 for key, val in answ.items():
     worksheet.write(row, col, key)
     worksheet.write(row, col + 1, val)
+    worksheet.write(row, col + 2, str_answers[key-1])
     row += 1
 
 workbook.close()
