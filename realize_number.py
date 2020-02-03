@@ -255,7 +255,7 @@ for j in range(2):
                 roi = image[y + (i - 1 + k * 5) * width_line + k * ir_zazor: y + (i + k * 5) * width_line + k * ir_zazor,
                       x + zerox + (j * lenth_line + j * x) + l * cell_size: x + zerox + (j * lenth_line + j * x) + (l + 1) * cell_size]
                 roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
-                ret, roi = cv.threshold(roi, 240, 255, cv.THRESH_BINARY)
+                ret, roi = cv.threshold(roi, 235, 255, cv.THRESH_BINARY)
                 cv.imshow(str(l * 100 + i + k * 5 + j * 20), roi)
                 letter = ""
                 if str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM_NOORDER or str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM_ORDER or str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM:
