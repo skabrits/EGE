@@ -182,7 +182,7 @@ answ = dict()
 cv.namedWindow('ege', cv.WINDOW_NORMAL)
 cv.namedWindow('imr', cv.WINDOW_NORMAL)
 cv.namedWindow('imc', cv.WINDOW_NORMAL)
-image = cv.imread('/Users/sevakabrits/Pictures/scans/student1.jpeg')
+image = cv.imread('scans/student1.jpeg')
 height, width, _ = image.shape
 cv.imshow('ege', image)
 cv.resizeWindow('ege', 600, 600)
