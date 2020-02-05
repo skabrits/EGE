@@ -22,6 +22,7 @@ import itertools
 import operator
 import xlsxwriter as xlsxwriter
 
+
 class maket_class:
     def __init__(self, answ, types):
         self.answers_str = [i.get() for i in answ]
