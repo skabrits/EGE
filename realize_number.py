@@ -23,6 +23,11 @@ import operator
 import xlsxwriter as xlsxwriter
 
 
+import sys
+
+print(sys.executable)
+
+
 class maket_class:
     def __init__(self, answ, types):
         self.answers_str = [i.get() for i in answ]
@@ -182,14 +187,14 @@ answ = dict()
 cv.namedWindow('ege', cv.WINDOW_NORMAL)
 cv.namedWindow('imr', cv.WINDOW_NORMAL)
 cv.namedWindow('imc', cv.WINDOW_NORMAL)
-image = cv.imread('scans/student1.jpeg')
+image = cv.imread('scans/Sample1.JPG')
 height, width, _ = image.shape
 cv.imshow('ege', image)
 cv.resizeWindow('ege', 600, 600)
 im = cv.cvtColor(image.copy(), cv.COLOR_BGR2GRAY)
 imr = cv.bitwise_not(im.copy())
-zr = np.zeros((height // 7, width // 5))
-imr[0: height // 7, 0: width // 5] = zr
+zr = np.zeros((height // 7, width // 6))
+imr[0: height // 7, 0: width // 6] = zr
 ret, imr = cv.threshold(imr, 175, 255, cv.THRESH_BINARY)
 # for x in range(height):
 #     for y in range(width):
