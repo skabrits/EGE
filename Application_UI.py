@@ -56,11 +56,14 @@ class View_app:
         self.btn = Button(self.frame, text="Выбрать", command=self.Controller.choose_maket)
         self.btn.grid(column=2, row=1)
 
+        self.lbl2 = Label(self.frame, text="Создать новый шаблон")
+        self.lbl2.grid(column=0, row=2)
+
         self.entr = Entry(self.frame, width=10)
-        self.entr.grid(column=0, row=2)
+        self.entr.grid(column=1, row=2)
 
         self.btn1 = Button(self.frame, text="Создать", command=self.Controller.set_maket)
-        self.btn1.grid(column=1, row=2)
+        self.btn1.grid(column=2, row=2)
 
         self.btn2 = Button(self.frame, text="Готово", command=self.Controller.clicked)
         self.btn2.grid(column=1, row=45)

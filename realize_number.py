@@ -24,7 +24,7 @@ def upload_image():
     cv.namedWindow('ege', cv.WINDOW_NORMAL)
     cv.namedWindow('imr', cv.WINDOW_NORMAL)
     cv.namedWindow('imc', cv.WINDOW_NORMAL)
-    image = cv.imread('scans/Sample1.JPG')
+    image = cv.imread('scans/Sample2.jpeg')
     height, width, _ = image.shape
     cv.imshow('ege', image)
     cv.resizeWindow('ege', 600, 600)
@@ -36,7 +36,7 @@ def find_calib_rects(image, height, width):
     imr = cv.bitwise_not(im.copy())
     # zr = np.zeros((height // 7, width // 6))
     # imr[0: height // 7, 0: width // 6] = zr
-    ret, imr = cv.threshold(imr, 175, 255, cv.THRESH_BINARY)
+    ret, imr = cv.threshold(imr, 100, 255, cv.THRESH_BINARY)
     # for x in range(height):
     #     for y in range(width):
     #         imr[x,y] = 255 - imr[x,y]
@@ -119,7 +119,7 @@ def find_calib_rects(image, height, width):
 
 def rotation_fix(image, height, width):
     calib_rects, calib_rot_rect = find_calib_rects(image, height, width)
-    angle = math.atan((calib_rot_rect[2][0][0]-calib_rot_rect[3][0][0])/(calib_rot_rect[3][0][1]-calib_rot_rect[2][0][1]))
+    angle = math.atan((calib_rects[2][0]-calib_rects[3][0])/(calib_rects[3][1]-calib_rects[2][1]))
     print(image[1000][1000])
     image = imu.rotate(image, angle) #0.4
     print(image[1000][1000])
@@ -142,10 +142,10 @@ def finish_calibration(calib_rects, height, width):
     scale_x = (calib_rects[3][0] - calib_rects[0][0]) / (3951 - 59)
     scale_y = (calib_rects[0][1] - calib_rects[3][1]) / (5555 - 1285)
     zerox = 0  # round(90 * scale_x)
-    str_point = (round(calib_rects[0][0] + (215 - 75) * scale_x), round(calib_rects[3][1] + (1810 - 1300) * scale_y))
+    str_point = (round(calib_rects[0][0] + (205 - 75) * scale_x), round(calib_rects[3][1] + (1810 - 1300) * scale_y))
     width_line = round((1966 - 1790) * scale_y)
-    lenth_line = round((2240 - 220) * scale_x)
-    ir_zazor = round((4600 - 4540) * scale_y)
+    lenth_line = round((2165 - 300) * scale_x)
+    ir_zazor = round((4600 - 4538) * scale_y)
     cell_size = round((340 - 219) * scale_x)
     borders = (0.125, 0.11)
     return zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders
