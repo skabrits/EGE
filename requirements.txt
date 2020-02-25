@@ -9,3 +9,4 @@ PyYAML==5.3
 requests==2.22.0
 urllib3==1.25.8
 XlsxWriter==1.2.7
+imutils==0.5.3
