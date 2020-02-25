@@ -121,7 +121,7 @@ def rotation_fix(image, height, width):
     calib_rects, calib_rot_rect = find_calib_rects(image, height, width)
     angle = math.atan((calib_rot_rect[2][0][0]-calib_rot_rect[3][0][0])/(calib_rot_rect[3][0][1]-calib_rot_rect[2][0][1]))
     print(image[1000][1000])
-    image = imu.rotate(image, 0.4)
+    image = imu.rotate(image, angle) #0.4
     print(image[1000][1000])
     cv.imshow('ege', image)
     print(angle)
