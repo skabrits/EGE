@@ -8,7 +8,7 @@
 python -m venv .venv    # Создание нового виртуального окружения
 source .venv/bin/activate   # Переключение к новому пустому окружению
 pip install --requirement requirements.txt  # Установка необходимых библиотек
-python realize_number.py    # Запуск программы
+python lunch_file.py    # Запуск программы
 ```
 
 ## Сборка независимого пакета
