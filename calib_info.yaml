@@ -1,0 +1,27 @@
+"\u0412\u044B\u0431\u0440\u0430\u0442\u044C": null
+
+"\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043F/\u0440": !!python/object:__main__.blank_class
+  cell_size: 42
+  ir_zazor: 30
+  lenth_line: 1000
+  name: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043F/\u0440"
+  number_of_calib_rects: 4
+  scale_x_c: 1530
+  scale_y_c: 2180
+  str_point: !!python/tuple
+    - 63
+    - 574
+  width_line: 57
+
+"\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043A/\u0440": !!python/object:__main__.blank_class
+  cell_size: 121
+  ir_zazor: 62
+  lenth_line: 1865
+  name: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043A/\u0440"
+  number_of_calib_rects: 5
+  scale_x_c: 3892
+  scale_y_c: 4270
+  str_point: !!python/tuple
+    - 130
+    - 510
+  width_line: 176

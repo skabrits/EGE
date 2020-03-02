@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import yaml
 from const_holder import *
 
 import pprint
@@ -24,15 +25,23 @@ except ImportError:
 def upload_image():
     cv.namedWindow('ege', cv.WINDOW_NORMAL)
     # cv.namedWindow('imr', cv.WINDOW_NORMAL)
-    # cv.namedWindow('imc', cv.WINDOW_NORMAL)
-    image = cv.imread('scans/Сканированное изображение 2.jpeg')
+    cv.namedWindow('imc', cv.WINDOW_NORMAL)
+    image = cv.imread('scans/Sample2.jpeg')
     height, width, _ = image.shape
     cv.imshow('ege', image)
     cv.resizeWindow('ege', 600, 600)
+
+    with open('calib_info.yaml', 'r') as file:
+        # The FullLoader parameter handles the conversion from YAML
+        # scalar values to Python the dictionary format
+        calib_data = yaml.load(file, Loader=yaml.Loader)
+        if calib_data is None:
+            calib_data = dict()
+
     return image, height, width
 
 
-def find_calib_rects(image, height, width):
+def find_calib_rects(image, height, width, name, number_of_calib_rects):
     im = cv.cvtColor(image.copy(), cv.COLOR_BGR2GRAY)
     imr = cv.bitwise_not(im.copy())
     # zr = np.zeros((height // 7, width // 6))
@@ -87,27 +96,22 @@ def find_calib_rects(image, height, width):
     # sorted(areas_countours, key=operator.itemgetter(0))
 
     imc = image.copy()
-    for i in range(5):
+    for i in range(number_of_calib_rects):
         imc = cv.drawContours(imc, ct, i, (0, 255, 0), 3)
         # sleep(1000)
-    # cv.imshow('imc', imc)
-    # cv.resizeWindow('imc', 600, 600)
+    cv.imshow('imc', imc)
+    cv.resizeWindow('imc', 600, 600)
     # cv.namedWindow("ss", cv.WINDOW_NORMAL)
     # cv.imshow("ss", cv.drawContours(imc, [cv.approxPolyDP(ct[0], 0.04 * cv.arcLength(ct[0], True), True)], -1, (0, 0, 255), 3))
     # cv.resizeWindow('ss', 600, 600)
 
     calib_rects = list()
     calib_ct = list()
-    for i in range(5):
+    for i in range(number_of_calib_rects):
         calib_ct.append(cv.minAreaRect(ct[i]))
         calib_rects.append(cv.boundingRect(ct[i]))  # x,y,w,h
-    calib_rects = sorted(calib_rects, key=operator.itemgetter(0, 1))
-    if calib_rects[2][1] > calib_rects[3][1]:
-        calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
 
-    calib_ct = sorted(calib_ct, key=operator.itemgetter(0, 1))
-    if calib_ct[2][1] > calib_ct[3][1]:
-        calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
+    calib_ct, calib_rects = sort_calib_rects(calib_ct, calib_rects, name)
 
     # pct = [np.int0(cv.boxPoints(crr)) for crr in calib_ct]
     # cv.imshow("ss", cv.drawContours(imc, pct, -1, (0, 0, 255), 3))
@@ -121,18 +125,81 @@ def find_calib_rects(image, height, width):
     return calib_rects, calib_ct
 
 
-def rotation_fix(image, height, width):
-    calib_rects, calib_rot_rect = find_calib_rects(image, height, width)
+def sort_calib_rects(calib_ct, calib_rects, name):
+    calib_rects = sorted(calib_rects, key=operator.itemgetter(0, 1))
+    calib_ct = sorted(calib_ct, key=operator.itemgetter(0, 1))
+    if name == "Русский 2020 к/р":
+        if calib_rects[2][1] > calib_rects[3][1]:
+            calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
+
+        if calib_ct[2][0][1] > calib_ct[3][0][1]:
+            calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
+    elif name == "Русский 2020 п/р":
+        if calib_rects[0][1] > calib_rects[1][1]:
+            calib_rects[0], calib_rects[1] = calib_rects[1], calib_rects[0]
+        if calib_rects[2][1] > calib_rects[3][1]:
+            calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
+
+        if calib_ct[0][0][1] > calib_ct[1][0][1]:
+            calib_ct[0], calib_ct[1] = calib_ct[1], calib_ct[0]
+        if calib_ct[2][0][1] > calib_ct[3][0][1]:
+            calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
+    return calib_ct, calib_rects
+
+
+def rect_minus(calib_rot_rect, name):
+    res = False
+    if name == "Русский 2020 к/р":
+        res = abs(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1]) > 0.001
+    elif name == "Русский 2020 п/р":
+        res = abs(calib_rot_rect[0][0][1] - calib_rot_rect[2][0][1]) > 0.001
+    return res
+
+
+def find_angle(calib_rot_rect, name):
+    angle = 0
+    if name == "Русский 2020 к/р":
+        angle = math.atan(-(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1])/(calib_rot_rect[4][0][0]-calib_rot_rect[0][0][0]))
+    elif name == "Русский 2020 п/р":
+        angle = math.atan(-(calib_rot_rect[0][0][1]-calib_rot_rect[2][0][1])/(calib_rot_rect[2][0][0]-calib_rot_rect[0][0][0]))
+    return angle
+
+
+def find_scales_and_strt(calib_rects, name, scale_x_c, scale_y_c, strt_point):
+    str_point, scale_x, scale_y = (0, 0), 0, 0
+    if name == "Русский 2020 к/р":
+        scale_x = (calib_rects[3][0] - calib_rects[0][0]) / scale_x_c
+        scale_y = (calib_rects[0][1] - calib_rects[3][1]) / scale_y_c
+        str_point = (round(calib_rects[0][0] + strt_point[0] * scale_x), round(calib_rects[3][1] + strt_point[1] * scale_y))
+    elif name == "Русский 2020 п/р":
+        scale_x = (calib_rects[2][0] - calib_rects[1][0]) / scale_x_c
+        scale_y = (calib_rects[1][1] - calib_rects[2][1]) / scale_y_c
+        str_point = (round(calib_rects[1][0] + strt_point[0] * scale_x), round(calib_rects[2][1] + strt_point[1] * scale_y))
+    return str_point, scale_x, scale_y
+
+
+def rotation_fix(image, height, width, name, number_of_calib_rects):
+    calib_rects, calib_rot_rect = find_calib_rects(image, height, width, name, number_of_calib_rects)
     sa = 0
     angle = 0
-    while abs(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1]) > 0.01:
-        angle = math.atan(-(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1])/(calib_rot_rect[4][0][0]-calib_rot_rect[0][0][0]))
-        image = imu.rotate(image, angle*100) #0.4
-        sa +=angle*100
-        calib_rects, calib_rot_rect = find_calib_rects(image, height, width)
-        print(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1], "   ", angle*100)
+    i = 0
+    while rect_minus(calib_rot_rect, name):
+        angle = find_angle(calib_rot_rect, name)
+        if abs(angle) < 0.00004:
+            angle *= 10000
+        elif abs(angle) < 0.004:
+            angle *= 100
 
-    print(angle*100, "   sa:  ", sa)
+        angle *= 1/(1 + round(i/30))
+        print(calib_rot_rect[0][0][1] - calib_rot_rect[min(4,number_of_calib_rects-1)][0][1], "   ", angle, "   ", calib_rot_rect[min(4,number_of_calib_rects-1)][0][0] - calib_rot_rect[0][0][0])
+        # print("-----+++++-----")
+        # pprint.pprint(calib_rot_rect)
+        image = imu.rotate(image, angle) #0.4
+        sa +=angle
+        calib_rects, calib_rot_rect = find_calib_rects(image, height, width, name, number_of_calib_rects)
+        i += 1
+
+    print(angle, "   sa:  ", sa)
 
     cv.imshow('ege', image)
 
@@ -148,15 +215,14 @@ def rotation_fix(image, height, width):
     return calib_rects
 
 
-def finish_calibration(calib_rects, height, width):
-    scale_x = (calib_rects[3][0] - calib_rects[0][0]) / (3951 - 59)
-    scale_y = (calib_rects[0][1] - calib_rects[3][1]) / (5555 - 1285)
+def finish_calibration(calib_rects, height, width, bp):
+    name, number_of_calib_rects, scale_x_c, scale_y_c, strt_point, width_linet, lenth_linet, ir_zazort, cell_sizet = bp
+    str_point, scale_x, scale_y = find_scales_and_strt(calib_rects, name, scale_x_c, scale_y_c, strt_point)
     zerox = 0  # round(90 * scale_x)
-    str_point = (round(calib_rects[0][0] + (205 - 75) * scale_x), round(calib_rects[3][1] + (1810 - 1300) * scale_y))
-    width_line = round((1966 - 1790) * scale_y)
-    lenth_line = round((2165 - 300) * scale_x)
-    ir_zazor = round((4600 - 4538) * scale_y)
-    cell_size = round((340 - 219) * scale_x)
+    width_line = round(width_linet * scale_y)
+    lenth_line = round(lenth_linet * scale_x)
+    ir_zazor = round(ir_zazort * scale_y)
+    cell_size = round(cell_sizet * scale_x)
     borders = (0.125, 0.11)
     return zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders
 

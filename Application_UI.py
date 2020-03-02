@@ -51,10 +51,18 @@ class View_app:
         self.maket = Combobox(self.frame)
         self.maket['values'] = tuple(self.Controller.makets.keys())
         self.maket.current(0)
-        self.maket.grid(column=1, row=1)
+        self.maket.grid(column=0, row=1)
 
         self.btn = Button(self.frame, text="Выбрать", command=self.Controller.choose_maket)
-        self.btn.grid(column=2, row=1)
+        self.btn.grid(column=1, row=1)
+
+        self.blank = Combobox(self.frame)
+        self.blank['values'] = tuple(self.Controller.calib_data.keys())
+        self.blank.current(0)
+        self.blank.grid(column=3, row=1)
+
+        self.btnb = Button(self.frame, text="Выбрать", command=self.Controller.choose_blank)
+        self.btnb.grid(column=4, row=1)
 
         self.lbl2 = Label(self.frame, text="Создать новый шаблон")
         self.lbl2.grid(column=0, row=2)
@@ -87,6 +95,14 @@ class Controller:
             self.makets = yaml.load(file, Loader=yaml.Loader)
             if self.makets is None:
                 self.makets = dict()
+
+        with open('calib_info.yaml', 'r') as file:
+            # The FullLoader parameter handles the conversion from YAML
+            # scalar values to Python the dictionary format
+            self.calib_data = yaml.load(file, Loader=yaml.Loader)
+            if self.calib_data is None:
+                self.calib_data = dict()
+
         # image = cv.imread('scans/Sample1.JPG')
         # cv.namedWindow('ege11', cv.WINDOW_NORMAL)
         # cv.imshow('ege11', image)
@@ -95,11 +111,13 @@ class Controller:
         # cv.destroyAllWindows()
 
         self.curr_mak = None
+        self.curr_blank = None
 
         self.str_answers = list()
         self.str_types = list()
 
         self.VA = View_app(self)
+
         self.VA.window_setup.mainloop()
 
     def get_types_and_answers(self):
@@ -112,8 +130,23 @@ class Controller:
                 return False
         return True
 
+    def check_blank(self):
+        return not(self.curr_blank is None)
+
     def is_named(self):
         return self.VA.entr.get() != ""
+
+    def choose_blank(self):
+        self.curr_blank = self.calib_data[self.VA.blank.get()]
+
+    def create_blank(self):
+        if self.is_named():
+            with open('calib_info.yaml', 'w') as outfile:
+                created_blank = blank_class(self.VA.answers, self.VA.types)
+                self.calib_data[self.VA.blank.get()] = created_blank
+                yaml.dump(self.calib_data, outfile)
+        else:
+            messagebox.showerror('Выбирите название бланка.', 'Укажите имя')
 
     def set_maket(self):
         if self.is_named():
@@ -153,11 +186,14 @@ class Controller:
         return False
 
     def clicked(self):
-        if self.check_types():
-            self.str_answers = list(map(lambda i: i.get(), self.VA.answers))
-            self.str_types = list(map(lambda i: i.get(), self.VA.types))
-            print(self.str_answers, "----", self.str_types)
-            self.VA.window_setup.destroy()
+        if self.check_blank():
+            if self.check_types():
+                self.str_answers = list(map(lambda i: i.get(), self.VA.answers))
+                self.str_types = list(map(lambda i: i.get(), self.VA.types))
+                print(self.str_answers, "----", self.str_types)
+                self.VA.window_setup.destroy()
+        else:
+            messagebox.showerror('Выбирите тип бланка.', 'Выбирите тип бланка')
 
     def choose_maket(self):
         self.curr_mak = self.makets[self.VA.maket.get()]
@@ -175,9 +211,9 @@ class GUI_Application(Controller):
 
         image, height, width = upload_image()
 
-        calib_rects = rotation_fix(image, height, width)
+        calib_rects = rotation_fix(image, height, width, self.curr_blank.name, self.curr_blank.number_of_calib_rects)
 
-        zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders = finish_calibration(calib_rects, height, width)
+        zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders = finish_calibration(calib_rects, height, width, (self.curr_blank.name, self.curr_blank.number_of_calib_rects, self.curr_blank.scale_x_c, self.curr_blank.scale_y_c, self.curr_blank.str_point, self.curr_blank.width_line, self.curr_blank.lenth_line, self.curr_blank.ir_zazor, self.curr_blank.cell_size))
 
         answ = image_to_answers(image, str_types, str_answers, (zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders), height, width)
 
