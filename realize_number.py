@@ -22,242 +22,271 @@ except ImportError:
     pass
 
 
-def upload_image():
-    cv.namedWindow('ege', cv.WINDOW_NORMAL)
-    # cv.namedWindow('imr', cv.WINDOW_NORMAL)
-    cv.namedWindow('imc', cv.WINDOW_NORMAL)
-    image = cv.imread('scans/Sample2.jpeg')
-    height, width, _ = image.shape
-    cv.imshow('ege', image)
-    cv.resizeWindow('ege', 600, 600)
+class Blanck_processer:
+    def __init__(self, proc_blank, types_numbers):
+        self.proc_blank = proc_blank
+        self.str_types, self.str_answers = types_numbers
+        self.height = 0
+        self.width = 0
+        self.image = None
+        self.calib_rects = None
+        self.calib_rot_rect = None
+        self.angle = 0
+        self.zerox = 0
+        self.width_line = 0
+        self.lenth_line = 0
+        self.ir_zazor = 0
+        self.cell_size = 0
+        self.borders = (0, 0)
+        self.answ = None
 
-    with open('calib_info.yaml', 'r') as file:
-        # The FullLoader parameter handles the conversion from YAML
-        # scalar values to Python the dictionary format
-        calib_data = yaml.load(file, Loader=yaml.Loader)
-        if calib_data is None:
-            calib_data = dict()
+    def upload_image(self):
+        cv.namedWindow('ege', cv.WINDOW_NORMAL)
+        cv.namedWindow('imr', cv.WINDOW_NORMAL)
+        cv.namedWindow('imc', cv.WINDOW_NORMAL)
+        self.image = cv.imread('scans/Русский 2020.jpeg')
+        self.height, self.width, _ = self.image.shape
+        cv.imshow('ege', self.image)
+        cv.resizeWindow('ege', 600, 600)
 
-    return image, height, width
-
-
-def find_calib_rects(image, height, width, name, number_of_calib_rects):
-    im = cv.cvtColor(image.copy(), cv.COLOR_BGR2GRAY)
-    imr = cv.bitwise_not(im.copy())
-    # zr = np.zeros((height // 7, width // 6))
-    # imr[0: height // 7, 0: width // 6] = zr
-    ret, imr = cv.threshold(imr, 150, 255, cv.THRESH_BINARY)
-    # for x in range(height):
-    #     for y in range(width):
-    #         imr[x,y] = 255 - imr[x,y]
-    # cv.imshow('imr', imr)
-    # cv.resizeWindow('imr', 600, 600)
-    a, ct, hr = cv.findContours(imr, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # print(ct)
-    # ind = 0
-    # l0 = 0
-    # for i in range(len(ct)):
-    #     if l0<len(ct[i]):
-    #         l0 = len(ct[i])
-    #         ind = i
-    # print len(ct[1])
-    ct = sorted(ct, key=len, reverse=True)
-    # for i in ct:
-    #     print len(i)
-    # ct = ct[::-1]
-    ct1 = copy(ct)
-    j = 0
-    for i in range(len(ct1)):
-        peri = cv.arcLength(ct1[i], True)
-        squar = cv.contourArea(ct1[i])
-        approx = cv.approxPolyDP(ct1[i], 0.04 * peri, True)
-        approx_peri = cv.arcLength(approx, True)
-        approx_squar = cv.contourArea(approx)
-        if len(approx) != 4:
-            ct = np.delete(ct, j)
-            continue
-
-        if (abs(cv.boundingRect(ct1[i])[2] - cv.boundingRect(ct1[i])[3]) > cv.boundingRect(ct1[i])[3] * 0.1):
-            ct = np.delete(ct, j)
-            continue
-
-        if approx_squar != 0:
-            if not(16.1 > approx_peri ** 2 / approx_squar > 15.9):
+    def find_calib_rects(self):
+        im = cv.cvtColor(self.image.copy(), cv.COLOR_BGR2GRAY)
+        imr = cv.bitwise_not(im.copy())
+        # zr = np.zeros((height // 7, width // 6))
+        # imr[0: height // 7, 0: width // 6] = zr
+        ret, imr = cv.threshold(imr, 150, 255, cv.THRESH_BINARY)
+        # for x in range(height):
+        #     for y in range(width):
+        #         imr[x,y] = 255 - imr[x,y]
+        cv.imshow('imr', imr)
+        cv.resizeWindow('imr', 600, 600)
+        a, ct, hr = cv.findContours(imr, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        # print(ct)
+        # ind = 0
+        # l0 = 0
+        # for i in range(len(ct)):
+        #     if l0<len(ct[i]):
+        #         l0 = len(ct[i])
+        #         ind = i
+        # print len(ct[1])
+        ct = sorted(ct, key=len, reverse=True)
+        # for i in ct:
+        #     print len(i)
+        # ct = ct[::-1]
+        ct1 = copy(ct)
+        j = 0
+        for i in range(len(ct1)):
+            peri = cv.arcLength(ct1[i], True)
+            squar = cv.contourArea(ct1[i])
+            approx = cv.approxPolyDP(ct1[i], 0.04 * peri, True)
+            approx_peri = cv.arcLength(approx, True)
+            approx_squar = cv.contourArea(approx)
+            if len(approx) != 4:
                 ct = np.delete(ct, j)
                 continue
 
-        j += 1
+            if (abs(cv.minAreaRect(ct1[i])[1][0] - cv.minAreaRect(ct1[i])[1][1]) > cv.minAreaRect(ct1[i])[1][1] * 0.1):
+                ct = np.delete(ct, j)
+                continue
 
-    ct = sorted(ct, key=partial(cv.arcLength, closed=True), reverse=True)
-    # cv.namedWindow("sas", cv.WINDOW_NORMAL)
-    # cv.imshow("sas", cv.drawContours(image.copy(), ct1[0:200], -1, (255,100,10),3)) #531
-    # cv.resizeWindow("sas",600,600)
-    # areas_countours = [(cv.contourArea(c), n) for n, c in enumerate(ct)]
-    # sorted(areas_countours, key=operator.itemgetter(0))
+            if approx_squar != 0:
+                if not(16.1 > approx_peri ** 2 / approx_squar > 15.9):
+                    ct = np.delete(ct, j)
+                    continue
 
-    imc = image.copy()
-    for i in range(number_of_calib_rects):
-        imc = cv.drawContours(imc, ct, i, (0, 255, 0), 3)
-        # sleep(1000)
-    cv.imshow('imc', imc)
-    cv.resizeWindow('imc', 600, 600)
-    # cv.namedWindow("ss", cv.WINDOW_NORMAL)
-    # cv.imshow("ss", cv.drawContours(imc, [cv.approxPolyDP(ct[0], 0.04 * cv.arcLength(ct[0], True), True)], -1, (0, 0, 255), 3))
-    # cv.resizeWindow('ss', 600, 600)
+            j += 1
 
-    calib_rects = list()
-    calib_ct = list()
-    for i in range(number_of_calib_rects):
-        calib_ct.append(cv.minAreaRect(ct[i]))
-        calib_rects.append(cv.boundingRect(ct[i]))  # x,y,w,h
+        ct = sorted(ct, key=partial(cv.arcLength, closed=True), reverse=True)
+        # cv.namedWindow("sas", cv.WINDOW_NORMAL)
+        # cv.imshow("sas", cv.drawContours(self.image.copy(), ct1[0:200], -1, (255,100,10),3)) #531
+        # cv.resizeWindow("sas",600,600)
+        # areas_countours = [(cv.contourArea(c), n) for n, c in enumerate(ct)]
+        # sorted(areas_countours, key=operator.itemgetter(0))
 
-    calib_ct, calib_rects = sort_calib_rects(calib_ct, calib_rects, name)
+        imc = self.image.copy()
+        for i in range(self.proc_blank.number_of_calib_rects):
+            imc = cv.drawContours(imc, ct, i, (0, 255, 0), 3)
+            # sleep(1000)
+        cv.imshow('imc', imc)
+        cv.resizeWindow('imc', 600, 600)
+        # cv.namedWindow("ss", cv.WINDOW_NORMAL)
+        # cv.imshow("ss", cv.drawContours(imc, [cv.approxPolyDP(ct[0], 0.04 * cv.arcLength(ct[0], True), True)], -1, (0, 0, 255), 3))
+        # cv.resizeWindow('ss', 600, 600)
 
-    # pct = [np.int0(cv.boxPoints(crr)) for crr in calib_ct]
-    # cv.imshow("ss", cv.drawContours(imc, pct, -1, (0, 0, 255), 3))
-    # cv.resizeWindow('ss', 600, 600)
+        calib_rects = list()
+        calib_ct = list()
+        for i in range(self.proc_blank.number_of_calib_rects):
+            calib_ct.append(cv.minAreaRect(ct[i]))
+            calib_rects.append(cv.boundingRect(ct[i]))  # x,y,w,h
 
-    # stan_dev = np.array([i[0] for i in calib_rects]).std()
-    # for i in range(len(calib_rects) - 1):
-    #     if abs(calib_rects[i][0] - calib_rects[i + 1][0]) < stan_dev and calib_rects[i][1] > calib_rects[i + 1][1]:
-    #         calib_rects[i], calib_rects[i + 1] = calib_rects[i + 1], calib_rects[i]
+        def calib_ct_normalizer(cont):
+            box = cv.boxPoints(cont)
+            def sorter(x):
+                return x[1]
+            box = sorted(box, key=sorter)
+            if box[0][0] > box[1][0]:
+                box[0], box[1] = box[1], box[0]
+            return box
 
-    return calib_rects, calib_ct
+        calib_ct = list(map(calib_ct_normalizer, calib_ct))
 
+        calib_ct, calib_rects = self.sort_calib_rects(calib_rects, calib_ct)
 
-def sort_calib_rects(calib_ct, calib_rects, name):
-    calib_rects = sorted(calib_rects, key=operator.itemgetter(0, 1))
-    calib_ct = sorted(calib_ct, key=operator.itemgetter(0, 1))
-    if name == "Русский 2020 к/р":
-        if calib_rects[2][1] > calib_rects[3][1]:
-            calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
+        # pct = [np.int0(cv.boxPoints(crr)) for crr in calib_ct]
+        # cv.imshow("ss", cv.drawContours(imc, pct, -1, (0, 0, 255), 3))
+        # cv.resizeWindow('ss', 600, 600)
 
-        if calib_ct[2][0][1] > calib_ct[3][0][1]:
-            calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
-    elif name == "Русский 2020 п/р":
-        if calib_rects[0][1] > calib_rects[1][1]:
-            calib_rects[0], calib_rects[1] = calib_rects[1], calib_rects[0]
-        if calib_rects[2][1] > calib_rects[3][1]:
-            calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
+        # stan_dev = np.array([i[0] for i in calib_rects]).std()
+        # for i in range(len(calib_rects) - 1):
+        #     if abs(calib_rects[i][0] - calib_rects[i + 1][0]) < stan_dev and calib_rects[i][1] > calib_rects[i + 1][1]:
+        #         calib_rects[i], calib_rects[i + 1] = calib_rects[i + 1], calib_rects[i]
 
-        if calib_ct[0][0][1] > calib_ct[1][0][1]:
-            calib_ct[0], calib_ct[1] = calib_ct[1], calib_ct[0]
-        if calib_ct[2][0][1] > calib_ct[3][0][1]:
-            calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
-    return calib_ct, calib_rects
+        self.calib_rects, self.calib_rot_rect = calib_rects, calib_ct
 
+    def sort_calib_rects(self, calib_rects, calib_ct):
+        calib_rects = sorted(calib_rects, key=operator.itemgetter(0, 1))
+        def sorter(x):
+            return x[0][0]
+        calib_ct = sorted(calib_ct, key=sorter)
+        if self.proc_blank.name == "Русский 2020 к/р":
+            if calib_rects[2][1] > calib_rects[3][1]:
+                calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
 
-def rect_minus(calib_rot_rect, name):
-    res = False
-    if name == "Русский 2020 к/р":
-        res = abs(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1]) > 0.001
-    elif name == "Русский 2020 п/р":
-        res = abs(calib_rot_rect[0][0][1] - calib_rot_rect[2][0][1]) > 0.001
-    return res
+            if calib_ct[2][0][1] > calib_ct[3][0][1]:
+                calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
+        elif self.proc_blank.name == "Русский 2020 п/р":
+            if calib_rects[0][1] > calib_rects[1][1]:
+                calib_rects[0], calib_rects[1] = calib_rects[1], calib_rects[0]
+            if calib_rects[2][1] > calib_rects[3][1]:
+                calib_rects[2], calib_rects[3] = calib_rects[3], calib_rects[2]
 
+            if calib_ct[0][0][1] > calib_ct[1][0][1]:
+                calib_ct[0], calib_ct[1] = calib_ct[1], calib_ct[0]
+            if calib_ct[2][0][1] > calib_ct[3][0][1]:
+                calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
+        return calib_ct, calib_rects
 
-def find_angle(calib_rot_rect, name):
-    angle = 0
-    if name == "Русский 2020 к/р":
-        angle = math.atan(-(calib_rot_rect[0][0][1]-calib_rot_rect[4][0][1])/(calib_rot_rect[4][0][0]-calib_rot_rect[0][0][0]))
-    elif name == "Русский 2020 п/р":
-        angle = math.atan(-(calib_rot_rect[0][0][1]-calib_rot_rect[2][0][1])/(calib_rot_rect[2][0][0]-calib_rot_rect[0][0][0]))
-    return angle
+    def rect_minus(self):
+        res = False
+        if self.proc_blank.name == "Русский 2020 к/р":
+            res = abs(self.calib_rot_rect[0][0][1]-self.calib_rot_rect[4][0][1]) > 0.001
+        elif self.proc_blank.name == "Русский 2020 п/р":
+            res = abs(self.calib_rot_rect[0][0][1] - self.calib_rot_rect[2][0][1]) > 0.001
+        return res
 
+    def find_angle(self):
+        angle = 0
+        if self.proc_blank.name == "Русский 2020 к/р":
+            angle = math.atan(-(self.calib_rot_rect[0][0][1]-self.calib_rot_rect[4][0][1])/(self.calib_rot_rect[4][0][0]-self.calib_rot_rect[0][0][0]))
+        elif self.proc_blank.name == "Русский 2020 п/р":
+            angle = (math.atan(-(self.calib_rot_rect[0][0][1]-self.calib_rot_rect[2][0][1])/(self.calib_rot_rect[2][0][0]-self.calib_rot_rect[0][0][0])) +
+                     math.atan(-(self.calib_rot_rect[1][0][1]-self.calib_rot_rect[3][0][1])/(self.calib_rot_rect[3][0][0]-self.calib_rot_rect[1][0][0])))/2
+        return angle
 
-def find_scales_and_strt(calib_rects, name, scale_x_c, scale_y_c, strt_point):
-    str_point, scale_x, scale_y = (0, 0), 0, 0
-    if name == "Русский 2020 к/р":
-        scale_x = (calib_rects[3][0] - calib_rects[0][0]) / scale_x_c
-        scale_y = (calib_rects[0][1] - calib_rects[3][1]) / scale_y_c
-        str_point = (round(calib_rects[0][0] + strt_point[0] * scale_x), round(calib_rects[3][1] + strt_point[1] * scale_y))
-    elif name == "Русский 2020 п/р":
-        scale_x = (calib_rects[2][0] - calib_rects[1][0]) / scale_x_c
-        scale_y = (calib_rects[1][1] - calib_rects[2][1]) / scale_y_c
-        str_point = (round(calib_rects[1][0] + strt_point[0] * scale_x), round(calib_rects[2][1] + strt_point[1] * scale_y))
-    return str_point, scale_x, scale_y
+    def find_scales_and_strt(self):
+        self.str_point, self.scale_x, self.scale_y = (0, 0), 0, 0
+        if self.proc_blank.name == "Русский 2020 к/р":
+            self.scale_x = (self.calib_rects[3][0] - self.calib_rects[0][0]) / self.proc_blank.scale_x_c
+            self.scale_y = (self.calib_rects[0][1] - self.calib_rects[3][1]) / self.proc_blank.scale_y_c
+            self.str_point = (self.calib_rects[0][0] + self.proc_blank.str_point[0] * self.scale_x, self.calib_rects[3][1] + self.proc_blank.str_point[1] * self.scale_y)
+        elif self.proc_blank.name == "Русский 2020 п/р":
+            self.scale_x = (self.calib_rects[2][0] - self.calib_rects[1][0]) / self.proc_blank.scale_x_c
+            self.scale_y = (self.calib_rects[1][1] - self.calib_rects[2][1]) / self.proc_blank.scale_y_c
+            self.str_point = (self.calib_rects[1][0] + self.proc_blank.str_point[0] * self.scale_x, self.calib_rects[2][1] + self.proc_blank.str_point[1] * self.scale_y)
 
+    def rotation_fix(self):
+        self.find_calib_rects()
+        pprint.pprint(self.calib_rects)
+        print("-----+++++-----")
+        pprint.pprint(self.calib_rot_rect)
+        print("---------------")
+        sa = 0
+        angle = 0
+        i = 0
+        angle = self.find_angle()
 
-def rotation_fix(image, height, width, name, number_of_calib_rects):
-    calib_rects, calib_rot_rect = find_calib_rects(image, height, width, name, number_of_calib_rects)
-    sa = 0
-    angle = 0
-    i = 0
-    while rect_minus(calib_rot_rect, name):
-        angle = find_angle(calib_rot_rect, name)
-        if abs(angle) < 0.00004:
-            angle *= 10000
-        elif abs(angle) < 0.004:
-            angle *= 100
+        self.image = imu.rotate(self.image, math.degrees(angle)) #0.4
+        self.find_calib_rects()
 
-        angle *= 1/(1 + round(i/30))
-        print(calib_rot_rect[0][0][1] - calib_rot_rect[min(4,number_of_calib_rects-1)][0][1], "   ", angle, "   ", calib_rot_rect[min(4,number_of_calib_rects-1)][0][0] - calib_rot_rect[0][0][0])
+        print(angle, "   sa:  ", sa)
+
+        cv.imshow('ege', self.image)
+
+        pprint.pprint(self.calib_rects)
+        print("-----+++++-----")
+        pprint.pprint(self.calib_rot_rect)
+        # print("---------------")
+        # calib_rects,calib_rot_rect = find_calib_rects(self.image, height, width)
+        # pprint.pprint(calib_rects)
         # print("-----+++++-----")
         # pprint.pprint(calib_rot_rect)
-        image = imu.rotate(image, angle) #0.4
-        sa +=angle
-        calib_rects, calib_rot_rect = find_calib_rects(image, height, width, name, number_of_calib_rects)
-        i += 1
 
-    print(angle, "   sa:  ", sa)
+    def finish_calibration(self):
+        self.find_scales_and_strt()
+        self.zerox = 0  # round(90 * scale_x)
+        self.width_line = self.proc_blank.width_line * self.scale_y
+        self.lenth_line = self.proc_blank.lenth_line * self.scale_x
+        self.ir_zazor = self.proc_blank.ir_zazor * self.scale_y
+        self.cell_size = self.proc_blank.cell_size * self.scale_x
+        self.borders = (0.125, 0.11)
 
-    cv.imshow('ege', image)
+    def check_str(self, column, block, row):
+        text = ""
+        for l in range(self.proc_blank.cell_number):
+            letter = self.check_cell(row, column, block, l)
+            text += letter
+        return text
 
-    pprint.pprint(calib_rects)
-    print("-----+++++-----")
-    pprint.pprint(calib_rot_rect)
-    # print("---------------")
-    # calib_rects,calib_rot_rect = find_calib_rects(image, height, width)
-    # pprint.pprint(calib_rects)
-    # print("-----+++++-----")
-    # pprint.pprint(calib_rot_rect)
+    def image_to_answers(self):
+        self.answ = dict()
+        for j in range(self.proc_blank.column_number):
+            self.check_column(j)
+        # print(answers)
+        print(self.answ.values())
 
-    return calib_rects
+        return self.answ
 
+    def check_column(self, column):
+        res_blocks = 0
+        if self.proc_blank.assymetrical_blocks:
+            res_blocks = len(self.proc_blank.rows_in_blocks)
+        else:
+            res_blocks = self.proc_blank.block_number
 
-def finish_calibration(calib_rects, height, width, bp):
-    name, number_of_calib_rects, scale_x_c, scale_y_c, strt_point, width_linet, lenth_linet, ir_zazort, cell_sizet = bp
-    str_point, scale_x, scale_y = find_scales_and_strt(calib_rects, name, scale_x_c, scale_y_c, strt_point)
-    zerox = 0  # round(90 * scale_x)
-    width_line = round(width_linet * scale_y)
-    lenth_line = round(lenth_linet * scale_x)
-    ir_zazor = round(ir_zazort * scale_y)
-    cell_size = round(cell_sizet * scale_x)
-    borders = (0.125, 0.11)
-    return zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders
+        for k in range(res_blocks):
+            self.check_block(column, k)
 
+    def check_block(self, column, block):
+        res_rows = 0
+        if self.proc_blank.assymetrical_blocks:
+            res_rows = self.proc_blank.rows_in_blocks[block]
+        else:
+            res_rows = self.proc_blank.row_number
 
-def image_to_answers(image, str_types, str_answers, baze_params, height, width):
-    zerox, str_point, width_line, lenth_line, ir_zazor, cell_size, borders = baze_params
-    answ = dict()
-    for j in range(2):
-        for k in range(4):
-            for i in range(1, 6):
-                text = ""
-                for l in range(17):
-                    x, y = str_point
-                    cv.namedWindow(str(l * 100 + i + k * 5 + j * 20))
-                    cv.moveWindow(str(l * 100 + i + k * 5 + j * 20), (j * 400 + l * 22), (i + k * 5) * 35)
+        for i in range(res_rows):
+            text = self.check_str(column, block, i)
+            self.answ[(i + 1 + block * 5 + column * 20)] = text
 
-                    # print(x + (j * lenth_line + j * (x)), " vs ", width)
-                    roi = image[y + (i - 1 + k * 5) * width_line + k * ir_zazor: y + (i + k * 5) * width_line + k * ir_zazor,
-                          x + zerox + (j * lenth_line + j * x) + l * cell_size: x + zerox + (j * lenth_line + j * x) + (
-                                      l + 1) * cell_size]
-                    roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
-                    ret, roi = cv.threshold(roi, 235, 255, cv.THRESH_BINARY)
-                    cv.imshow(str(l * 100 + i + k * 5 + j * 20), roi)
-                    letter = ""
-                    if str_types[i - 1 + k * 5 + j * 20] == choose_types.NUM_NOORDER or str_types[
-                        i - 1 + k * 5 + j * 20] == choose_types.NUM_ORDER or str_types[
-                        i - 1 + k * 5 + j * 20] == choose_types.NUM:
-                        letter = pytesseract.image_to_string(roi, lang='eng',
-                                                             config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
-                    elif str_types[i - 1 + k * 5 + j * 20] == choose_types.WORD:
-                        letter = pytesseract.image_to_string(roi, lang='rus',
-                                                             config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
-                    text += letter
-                answ[(i + k * 5 + j * 20)] = text
-    # print(answers)
-    print(answ.values())
-
-    return answ
+    def check_cell(self, row, column, block, cell_number):
+        x, y = self.str_point
+        x, y = round(x), round(y)
+        cv.namedWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20))
+        cv.moveWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), (column * 400 + cell_number * 22), (row + 1 + block * 5) * 35)
+        # print(x + (j * lenth_line + j * (x)), " vs ", width)
+        roi = self.image[y + round((row + block * 5) * self.width_line) + round(block * self.ir_zazor): y + round((
+                row + 1 + block * 5) * self.width_line) + round(block * self.ir_zazor),
+              x + self.zerox + round(column * self.lenth_line + column * x) + round(cell_number * self.cell_size): x + self.zerox + round(
+                      column * self.lenth_line + column * x) + round((cell_number + 1) * self.cell_size)]
+        roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+        ret, roi = cv.threshold(roi, 235, 255, cv.THRESH_BINARY)
+        cv.imshow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), roi)
+        letter = ""
+        if self.str_types[row + block * 5 + column * 20] == choose_types.NUM_NOORDER or self.str_types[
+            row + block * 5 + column * 20] == choose_types.NUM_ORDER or self.str_types[
+            row + block * 5 + column * 20] == choose_types.NUM:
+            letter = pytesseract.image_to_string(roi, lang='eng',
+                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
+        elif self.str_types[row + block * 5 + column * 20] == choose_types.WORD:
+            letter = pytesseract.image_to_string(roi, lang='rus',
+                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+        return letter
