@@ -35,7 +35,7 @@ class Blanck_processer:
         self.zerox = 0
         self.width_line = 0
         self.lenth_line = 0
-        self.ir_zazor = 0
+        self.block_zazor = 0
         self.cell_size = 0
         self.borders = (0, 0)
         self.answ = None
@@ -44,7 +44,7 @@ class Blanck_processer:
         cv.namedWindow('ege', cv.WINDOW_NORMAL)
         cv.namedWindow('imr', cv.WINDOW_NORMAL)
         cv.namedWindow('imc', cv.WINDOW_NORMAL)
-        self.image = cv.imread('scans/Русский 2020.jpeg')
+        self.image = cv.imread('scans/Образец 15118480 5.jpeg')
         self.height, self.width, _ = self.image.shape
         cv.imshow('ege', self.image)
         cv.resizeWindow('ege', 600, 600)
@@ -166,14 +166,6 @@ class Blanck_processer:
                 calib_ct[2], calib_ct[3] = calib_ct[3], calib_ct[2]
         return calib_ct, calib_rects
 
-    def rect_minus(self):
-        res = False
-        if self.proc_blank.name == "Русский 2020 к/р":
-            res = abs(self.calib_rot_rect[0][0][1]-self.calib_rot_rect[4][0][1]) > 0.001
-        elif self.proc_blank.name == "Русский 2020 п/р":
-            res = abs(self.calib_rot_rect[0][0][1] - self.calib_rot_rect[2][0][1]) > 0.001
-        return res
-
     def find_angle(self):
         angle = 0
         if self.proc_blank.name == "Русский 2020 к/р":
@@ -201,32 +193,24 @@ class Blanck_processer:
         pprint.pprint(self.calib_rot_rect)
         print("---------------")
         sa = 0
-        angle = 0
-        i = 0
         angle = self.find_angle()
 
-        self.image = imu.rotate(self.image, math.degrees(angle)) #0.4
+        self.image = imu.rotate(self.image, math.degrees(angle), center=(self.calib_rects[0][0], self.calib_rects[0][1])) #0.4
         self.find_calib_rects()
-
-        print(angle, "   sa:  ", sa)
 
         cv.imshow('ege', self.image)
 
         pprint.pprint(self.calib_rects)
         print("-----+++++-----")
         pprint.pprint(self.calib_rot_rect)
-        # print("---------------")
-        # calib_rects,calib_rot_rect = find_calib_rects(self.image, height, width)
-        # pprint.pprint(calib_rects)
-        # print("-----+++++-----")
-        # pprint.pprint(calib_rot_rect)
 
     def finish_calibration(self):
         self.find_scales_and_strt()
+        self.vert_poprav_ochcka = self.proc_blank.vert_poprav_ochcka * self.scale_x
         self.zerox = 0  # round(90 * scale_x)
         self.width_line = self.proc_blank.width_line * self.scale_y
         self.lenth_line = self.proc_blank.lenth_line * self.scale_x
-        self.ir_zazor = self.proc_blank.ir_zazor * self.scale_y
+        self.block_zazor = self.proc_blank.block_zazor * self.scale_y
         self.cell_size = self.proc_blank.cell_size * self.scale_x
         self.borders = (0.125, 0.11)
 
@@ -269,24 +253,24 @@ class Blanck_processer:
 
     def check_cell(self, row, column, block, cell_number):
         x, y = self.str_point
-        x, y = round(x), round(y)
         cv.namedWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20))
         cv.moveWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), (column * 400 + cell_number * 22), (row + 1 + block * 5) * 35)
         # print(x + (j * lenth_line + j * (x)), " vs ", width)
-        roi = self.image[y + round((row + block * 5) * self.width_line) + round(block * self.ir_zazor): y + round((
-                row + 1 + block * 5) * self.width_line) + round(block * self.ir_zazor),
-              x + self.zerox + round(column * self.lenth_line + column * x) + round(cell_number * self.cell_size): x + self.zerox + round(
-                      column * self.lenth_line + column * x) + round((cell_number + 1) * self.cell_size)]
+        roi = self.image[round(y + (row + block * 5) * self.width_line + block * self.block_zazor): round(y + (
+                row + 1 + block * 5) * self.width_line + block * self.block_zazor),
+              round(x + self.zerox + column * self.lenth_line + column * x + cell_number * self.cell_size - (row + block * 5) * self.vert_poprav_ochcka): round(x + self.zerox +
+                      column * self.lenth_line + column * x + (cell_number + 1) * self.cell_size - (row + block * 5) * self.vert_poprav_ochcka)]
+
         roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
-        ret, roi = cv.threshold(roi, 235, 255, cv.THRESH_BINARY)
+        ret, roi = cv.threshold(roi, 145, 255, cv.THRESH_BINARY)
         cv.imshow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), roi)
         letter = ""
         if self.str_types[row + block * 5 + column * 20] == choose_types.NUM_NOORDER or self.str_types[
             row + block * 5 + column * 20] == choose_types.NUM_ORDER or self.str_types[
             row + block * 5 + column * 20] == choose_types.NUM:
             letter = pytesseract.image_to_string(roi, lang='eng',
-                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
+                                                 config='--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789')
         elif self.str_types[row + block * 5 + column * 20] == choose_types.WORD:
             letter = pytesseract.image_to_string(roi, lang='rus',
-                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+                                                 config='--psm 8 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
         return letter

@@ -3,11 +3,11 @@
 "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043F/\u0440": !!python/object:__main__.blank_class
   assymetrical_blocks: true
   block_number: 4
+  block_zazor: 25
   cell_number: 17
-  cell_size: 42.73
+  cell_size: 42.67
   column_number: 2
-  ir_zazor: 25
-  lenth_line: 707
+  lenth_line: 703
   name: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043F/\u0440"
   number_of_calib_rects: 4
   row_number: 5
@@ -19,16 +19,18 @@
   scale_x_c: 1530
   scale_y_c: 2180
   str_point: !!python/tuple
-    - 64
-    - 577
-  width_line: 64
+    - 68
+    - 575
+  vert_poprav_ochcka: 0.6
+  width_line: 64.3
 
 "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043A/\u0440": !!python/object:__main__.blank_class
+  assymetrical_blocks: false
   block_number: 4
+  block_zazor: 62
   cell_number: 17
   cell_size: 121
   column_number: 2
-  ir_zazor: 62
   lenth_line: 1865
   name: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439 2020 \u043A/\u0440"
   number_of_calib_rects: 5
@@ -43,4 +45,5 @@
   str_point: !!python/tuple
     - 130
     - 510
+  vert_poprav_ochcka: 0
   width_line: 176

@@ -21,7 +21,7 @@ class blank_class:
         self.str_point = other["str_point"]
         self.width_line = other["width_line"]
         self.lenth_line = other["lenth_line"]
-        self.ir_zazor = other["ir_zazor"]
+        self.block_zazor = other["block_zazor"]
         self.cell_size = other["cell_size"]
         self.cell_number = other["cell_number"]
         self.assymetrical_blocks =  other["assymetrical_blocks"]
@@ -29,3 +29,4 @@ class blank_class:
         self.row_number = other["row_number"]
         self.block_number = other["block_number"]
         self.column_number = other["column_number"]
+        self.vert_poprav_ochcka = other["vert_poprav_ochcka"]
