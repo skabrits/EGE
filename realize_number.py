@@ -269,8 +269,8 @@ class Blanck_processer:
             row + block * 5 + column * 20] == choose_types.NUM_ORDER or self.str_types[
             row + block * 5 + column * 20] == choose_types.NUM:
             letter = pytesseract.image_to_string(roi, lang='eng',
-                                                 config='--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789')
+                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
         elif self.str_types[row + block * 5 + column * 20] == choose_types.WORD:
             letter = pytesseract.image_to_string(roi, lang='rus',
-                                                 config='--psm 8 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
         return letter
