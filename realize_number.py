@@ -1,5 +1,6 @@
 # coding=utf-8
-
+import torch
+from torchvision import transforms
 import yaml
 from const_holder import *
 
@@ -13,6 +14,7 @@ import pytesseract
 import operator
 import math
 from functools import partial
+import matplotlib.pyplot as plt
 
 
 
@@ -24,6 +26,8 @@ except ImportError:
 
 class Blanck_processer:
     def __init__(self, proc_blank, types_numbers):
+        self.ct_t = list()
+        self.ct_f = list()
         self.proc_blank = proc_blank
         self.str_types, self.str_answers = types_numbers
         self.height = 0
@@ -52,27 +56,11 @@ class Blanck_processer:
     def find_calib_rects(self):
         im = cv.cvtColor(self.image.copy(), cv.COLOR_BGR2GRAY)
         imr = cv.bitwise_not(im.copy())
-        # zr = np.zeros((height // 7, width // 6))
-        # imr[0: height // 7, 0: width // 6] = zr
         ret, imr = cv.threshold(imr, 150, 255, cv.THRESH_BINARY)
-        # for x in range(height):
-        #     for y in range(width):
-        #         imr[x,y] = 255 - imr[x,y]
         cv.imshow('imr', imr)
         cv.resizeWindow('imr', 600, 600)
         a, ct, hr = cv.findContours(imr, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        # print(ct)
-        # ind = 0
-        # l0 = 0
-        # for i in range(len(ct)):
-        #     if l0<len(ct[i]):
-        #         l0 = len(ct[i])
-        #         ind = i
-        # print len(ct[1])
         ct = sorted(ct, key=len, reverse=True)
-        # for i in ct:
-        #     print len(i)
-        # ct = ct[::-1]
         ct1 = copy(ct)
         j = 0
         for i in range(len(ct1)):
@@ -97,16 +85,10 @@ class Blanck_processer:
             j += 1
 
         ct = sorted(ct, key=partial(cv.arcLength, closed=True), reverse=True)
-        # cv.namedWindow("sas", cv.WINDOW_NORMAL)
-        # cv.imshow("sas", cv.drawContours(self.image.copy(), ct1[0:200], -1, (255,100,10),3)) #531
-        # cv.resizeWindow("sas",600,600)
-        # areas_countours = [(cv.contourArea(c), n) for n, c in enumerate(ct)]
-        # sorted(areas_countours, key=operator.itemgetter(0))
 
         imc = self.image.copy()
         for i in range(self.proc_blank.number_of_calib_rects):
             imc = cv.drawContours(imc, ct, i, (0, 255, 0), 3)
-            # sleep(1000)
         cv.imshow('imc', imc)
         cv.resizeWindow('imc', 600, 600)
         # cv.namedWindow("ss", cv.WINDOW_NORMAL)
@@ -223,10 +205,13 @@ class Blanck_processer:
 
     def image_to_answers(self):
         self.answ = dict()
+        plt.yticks(np.arange(0, 700, 1))
+        from matplotlib.pyplot import figure
         for j in range(self.proc_blank.column_number):
             self.check_column(j)
         # print(answers)
         print(self.answ.values())
+        plt.show()
 
         return self.answ
 
@@ -244,33 +229,81 @@ class Blanck_processer:
         res_rows = 0
         if self.proc_blank.assymetrical_blocks:
             res_rows = self.proc_blank.rows_in_blocks[block]
+            row_sum = sum(self.proc_blank.rows_in_blocks)
         else:
             res_rows = self.proc_blank.row_number
+            row_sum = self.proc_blank.row_number * self.proc_blank.block_number
 
         for i in range(res_rows):
             text = self.check_str(column, block, i)
-            self.answ[(i + 1 + block * 5 + column * 20)] = text
+            self.answ[(i + 1 + block * 5 + column * row_sum)] = text
 
     def check_cell(self, row, column, block, cell_number):
         x, y = self.str_point
-        cv.namedWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20))
-        cv.moveWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), (column * 400 + cell_number * 22), (row + 1 + block * 5) * 35)
         # print(x + (j * lenth_line + j * (x)), " vs ", width)
         roi = self.image[round(y + (row + block * 5) * self.width_line + block * self.block_zazor): round(y + (
                 row + 1 + block * 5) * self.width_line + block * self.block_zazor),
               round(x + self.zerox + column * self.lenth_line + column * x + cell_number * self.cell_size - (row + block * 5) * self.vert_poprav_ochcka): round(x + self.zerox +
-                      column * self.lenth_line + column * x + (cell_number + 1) * self.cell_size - (row + block * 5) * self.vert_poprav_ochcka)]
+                                                                                                                                                                column * self.lenth_line + column * x + (cell_number + 1) * self.cell_size - (row + block * 5) * self.vert_poprav_ochcka)]
 
-        roi = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
-        ret, roi = cv.threshold(roi, 145, 255, cv.THRESH_BINARY)
-        cv.imshow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), roi)
-        letter = ""
-        if self.str_types[row + block * 5 + column * 20] == choose_types.NUM_NOORDER or self.str_types[
-            row + block * 5 + column * 20] == choose_types.NUM_ORDER or self.str_types[
-            row + block * 5 + column * 20] == choose_types.NUM:
-            letter = pytesseract.image_to_string(roi, lang='eng',
-                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
-        elif self.str_types[row + block * 5 + column * 20] == choose_types.WORD:
-            letter = pytesseract.image_to_string(roi, lang='rus',
-                                                 config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+        letter = self.process_cell(block, cell_number, column, roi, row)
         return letter
+
+    def process_cell(self, block, cell_number, column, roi, row):
+        cell_image = cv.cvtColor(roi.copy(), cv.COLOR_BGR2GRAY)
+        ret, cell_image = cv.threshold(cell_image, 230, 255, cv.THRESH_BINARY)
+        cv.namedWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20))
+        cv.moveWindow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), (column * 400 + cell_number * 22),
+                      (row + 1 + block * 5) * 35)
+        # cv.imshow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), cell_image[9:-9, 9:-9])
+
+        imr = cv.bitwise_not(cell_image.copy())
+        # imr = cv.GaussianBlur(imr, (3,3),7)
+        # ret, imr = cv.threshold(imr, 5, 255, cv.THRESH_BINARY)
+
+        a, ct, hr = cv.findContours(imr.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        c_a = np.array([cv.contourArea(cv.approxPolyDP(k, 0.0000001 * cv.arcLength(k, True), True)) for k in ct])
+        c_m = c_a.mean()
+        c_s = c_a.std()
+        mask = np.zeros(imr.shape, dtype="uint8")
+        need_to_realize = False
+        if c_m  / c_s < 0.65:
+            self.ct_f.append(c_m / c_s)
+            need_to_realize = True
+            for i in ct:
+                if cv.contourArea(i) > c_m:
+                    cv.drawContours(mask, [i], -1, 255, -1)
+        else:
+            self.ct_t.append(c_m/c_s)
+
+        imr = cv.bitwise_and(imr, imr, mask=mask)
+        plt.scatter(c_a, [cell_number + 1 + row * 17 + block * 5 * 17 + column * 20 * 17 for _ in range(len(c_a))])
+
+        numpy_hi = np.hstack((cv.drawContours(roi.copy(), ct, -1, (0,255,100), 1), cv.cvtColor(imr.copy(), cv.COLOR_GRAY2BGR)))
+        cv.imshow(str(cell_number * 100 + row + 1 + block * 5 + column * 20), numpy_hi)
+
+        letter = self.read_text(block, imr, column, row, need_to_realize)
+        return letter
+
+    def read_text(self, block, cell_image, column, row, need_to_realize=False):
+        letter1 = ""
+        if need_to_realize:
+            net = SimpleConvNet()
+            net.load_state_dict(torch.load('numbers_cnn'))
+            net.eval()
+
+            transform = transforms.Compose(
+                [transforms.ToTensor()])
+
+            y_pred = net(transform(cv.resize(cell_image, (28, 28))).float().unsqueeze(0))
+            _, predicted = torch.max(y_pred, 1)
+            letter1 = str(predicted[0].tolist())
+            # if self.str_types[row + block * 5 + column * 20] == choose_types.NUM_NOORDER or self.str_types[
+            #     row + block * 5 + column * 20] == choose_types.NUM_ORDER or self.str_types[
+            #     row + block * 5 + column * 20] == choose_types.NUM:
+            #     letter = pytesseract.image_to_string(cell_image, lang='eng',
+            #                                          config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789')
+            # elif self.str_types[row + block * 5 + column * 20] == choose_types.WORD:
+            #     letter = pytesseract.image_to_string(cell_image, lang='rus',
+            #                                          config='--psm 10 --oem 3 -c tessedit_char_whitelist=абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')
+        return letter1

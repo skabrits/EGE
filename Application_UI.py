@@ -285,10 +285,15 @@ class Controller:
 
 class GUI_Application(Controller):
     def __init__(self):
+        import cv2 as cv
+        im = cv.imread('scans/TEST/606.png')
+
         super().__init__()
 
         t, a = self.get_types_and_answers()
         Model = Blanck_processer(self.curr_blank, (t, a))
+        # Model = Blanck_processer(0, ([0], [0]))
+        # print(Model.process_cell(0,1,0,im,0))
 
         Model.upload_image()
 
